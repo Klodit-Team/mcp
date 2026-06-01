@@ -1,6 +1,7 @@
 export type LlmConfig = {
   onPremEndpoint?: string;
   externalEndpoint?: string;
+  geminiWeb2ApiEndpoint?: string;
   timeoutMs: number;
   auditBaseUrl?: string;
   auditServiceToken?: string;
@@ -10,6 +11,7 @@ export type LlmConfig = {
 export function loadConfig(): LlmConfig {
   const onPremEndpoint = process.env.LLM_ONPREM_ENDPOINT;
   const externalEndpoint = process.env.LLM_EXTERNAL_ENDPOINT;
+  const geminiWeb2ApiEndpoint = process.env.GEMINI_WEB2API_ENDPOINT;
   const timeoutMs = Number(process.env.LLM_TIMEOUT_MS ?? "20000");
   const auditBaseUrl = process.env.AUDIT_BASE_URL;
   const auditServiceToken = process.env.AUDIT_SERVICE_TOKEN;
@@ -19,6 +21,7 @@ export function loadConfig(): LlmConfig {
   return {
     onPremEndpoint,
     externalEndpoint,
+    geminiWeb2ApiEndpoint,
     timeoutMs,
     auditBaseUrl,
     auditServiceToken,
