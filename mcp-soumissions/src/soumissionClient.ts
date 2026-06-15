@@ -54,7 +54,9 @@ export class SoumissionClient {
       );
     }
 
-    const response = await this.http.post(this.config.anomalyEndpoint, payload, {
+    const soumissionId = payload.soumissionId as string;
+    const endpoint = this.config.anomalyEndpoint.replace("{soumissionId}", soumissionId);
+    const response = await this.http.post(endpoint, payload, {
       headers: this.buildHeaders(),
     });
     return response.data;

@@ -70,7 +70,12 @@ export class EvaluationClient {
       );
     }
 
-    const response = await this.http.post(this.config.scoreIaEndpoint, payload, {
+    const evaluationId = payload.evaluationId as string;
+    const submissionId = payload.submissionId as string;
+    const endpoint = this.config.scoreIaEndpoint
+      .replace("{evaluationId}", evaluationId)
+      .replace("{submissionId}", submissionId);
+    const response = await this.http.post(endpoint, payload, {
       headers: this.buildHeaders(),
     });
     return response.data;
@@ -83,7 +88,12 @@ export class EvaluationClient {
       );
     }
 
-    const response = await this.http.post(this.config.comparisonEndpoint, payload, {
+    const evaluationId = payload.evaluationId as string;
+    const submissionId = payload.submissionId as string;
+    const endpoint = this.config.comparisonEndpoint
+      .replace("{evaluationId}", evaluationId)
+      .replace("{submissionId}", submissionId);
+    const response = await this.http.post(endpoint, payload, {
       headers: this.buildHeaders(),
     });
     return response.data;

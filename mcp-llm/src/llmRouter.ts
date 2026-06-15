@@ -12,6 +12,9 @@ export type LlmRequest = {
   strippedInput?: Record<string, unknown>;
 };
 
+const GEMINI_URL = (key: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`;
+
 export class LlmRouter {
   private readonly config: LlmConfig;
   private readonly http: AxiosInstance;
@@ -22,17 +25,14 @@ export class LlmRouter {
   }
 
   decideRoute(sensitivity: Sensitivity): RouteDecision {
-    if (this.config.geminiWeb2ApiEndpoint) {
-      return "gemini";
-    }
-    if (sensitivity === "non_sensitive" && this.config.externalEndpoint) {
-      return "external";
-    }
+    if (this.config.geminiApiKey) return "gemini";
+    if (sensitivity === "non_sensitive" && this.config.externalEndpoint) return "external";
     return "on_prem";
   }
 
   async call(request: LlmRequest) {
     const route = request.route ?? this.decideRoute(request.sensitivity);
+
     if (route === "external") {
       if (!this.config.externalEndpoint) {
         throw new Error("LLM_EXTERNAL_ENDPOINT is not configured");
@@ -42,19 +42,30 @@ export class LlmRouter {
     }
 
     if (route === "gemini") {
-      if (!this.config.geminiWeb2ApiEndpoint) {
-        throw new Error("GEMINI_WEB2API_ENDPOINT is not configured");
+      if (!this.config.geminiApiKey) {
+        throw new Error("GEMINI_API_KEY is not configured");
       }
-      const response = await this.http.post(
-        this.config.geminiWeb2ApiEndpoint,
-        this.toGeminiRequest(request)
+      const input = request.input;
+      const prompt = (input.prompt as string | undefined) ?? "";
+      const context = input.context as Record<string, unknown> | undefined;
+
+      const userText = context && Object.keys(context).length > 0
+        ? `Context:\n${JSON.stringify(context, null, 2)}\n\n${prompt}`
+        : prompt;
+
+      const response = await this.callWithRetry(() =>
+        this.http.post(GEMINI_URL(this.config.geminiApiKey!), {
+          contents: [{ role: "user", parts: [{ text: userText }] }],
+          systemInstruction: {
+            parts: [{ text: `You are an AI assistant for a public procurement platform. Task: ${request.task}. Always return valid JSON as specified in the prompt.` }],
+          },
+          generationConfig: { responseMimeType: "application/json" },
+        }),
       );
-      const data = (response.data as { choices?: Array<{ message?: { content?: string } }> }).choices?.[0]
-        ?.message?.content;
-      return {
-        route,
-        data: data ? JSON.parse(data) : response.data,
-      };
+
+      const rawText: string =
+        (response.data as any)?.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+      return { route, data: this.parseJson(rawText) };
     }
 
     if (!this.config.onPremEndpoint) {
@@ -64,29 +75,33 @@ export class LlmRouter {
     return { route, data: response.data };
   }
 
-  private toGeminiRequest(request: LlmRequest) {
-    const input = request.input;
-    const prompt = (input.prompt as string | undefined) ?? "";
-    const context = input.context as Record<string, unknown> | undefined;
-
-    const messages: Array<{ role: string; content: string }> = [];
-
-    if (context && Object.keys(context).length > 0) {
-      messages.push({
-        role: "system",
-        content: JSON.stringify(context, null, 2),
-      });
+  private async callWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
+    let lastErr: unknown;
+    for (let i = 0; i < retries; i++) {
+      try { return await fn(); } catch (e: any) {
+        const code = e?.response?.status;
+        if (code === 503 || code === 429) {
+          lastErr = e;
+          await new Promise(r => setTimeout(r, 1_000 * (i + 1)));
+          continue;
+        }
+        throw e;
+      }
     }
+    throw lastErr;
+  }
 
-    messages.push({
-      role: "user",
-      content: prompt,
-    });
-
-    return {
-      model: "gemini-3.5-flash",
-      messages,
-      stream: false,
-    };
+  private parseJson(text: string): unknown {
+    const cleaned = text
+      .replace(/^```(?:json)?\s*/m, "")
+      .replace(/\s*```\s*$/m, "")
+      .trim();
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const match = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/s);
+      if (match) { try { return JSON.parse(match[1]); } catch {} }
+      return { raw: text };
+    }
   }
 }
