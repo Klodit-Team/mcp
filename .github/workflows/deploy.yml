@@ -23,5 +23,5 @@ jobs:
             cd ~/mcp
             git pull
             cd ~/al-mizan-deployments
-            docker compose up -d --build mcp
+            make up-ai
             echo "✅ Deployment Successful!"
