@@ -13,7 +13,7 @@ export type LlmRequest = {
 };
 
 const GEMINI_URL = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${key}`;
 
 export class LlmRouter {
   private readonly config: LlmConfig;
