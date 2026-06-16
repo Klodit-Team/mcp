@@ -80,11 +80,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         action: parsed.action,
         entite: parsed.entite,
         entite_id: parsed.entiteId,
-        details: parsed.details,
+        details: parsed.agentName ? `[Agent: ${parsed.agentName}] ${parsed.details || ''}` : parsed.details,
         ip_address: parsed.ipAddress,
         user_agent: parsed.userAgent,
         horodatage: parsed.horodatage,
-        agent_name: parsed.agentName,
       });
       return { content: [{ type: "text", text: JSON.stringify(response) }] };
     }
