@@ -23,9 +23,20 @@ export class UsersClient {
   }
 
   async getOrganisationProfile(userId: string) {
-    const response = await this.http.get("/operateurs-economiques/profile", {
-      headers: this.buildHeaders({ "x-user-id": userId }),
-    });
-    return response.data;
+    try {
+      const response = await this.http.get("/operateurs-economiques/profile", {
+        headers: this.buildHeaders({ "x-user-id": userId }),
+      });
+      return response.data;
+    } catch (err: any) {
+      if (err.response && err.response.status === 404) {
+        // Try service contractant profile
+        const response = await this.http.get("/services-contractants/profile", {
+          headers: this.buildHeaders({ "x-user-id": userId }),
+        });
+        return response.data;
+      }
+      throw err;
+    }
   }
 }
