@@ -71,7 +71,7 @@ export class AoClient {
 
     const gagId = payload.gagId as string;
     const endpoint = this.config.greAGreScoreEndpoint.replace("{demandeId}", gagId);
-    const response = await this.http.post(endpoint, payload, {
+    const response = await this.http.patch(endpoint, payload, {
       headers: this.buildHeaders(),
     });
     return response.data;
