@@ -113,70 +113,75 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const toolName = request.params.name;
   const input = request.params.arguments ?? {};
 
-  switch (toolName) {
-    case "complete": {
-      const parsed = completeSchema.parse(input);
-      const data = await executeTask(
-        "complete",
-        {
-          prompt: parsed.prompt,
-          context: parsed.context,
-          maxTokens: parsed.maxTokens,
-        },
-        parsed.sensitivity
-      );
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
+  try {
+    switch (toolName) {
+      case "complete": {
+        const parsed = completeSchema.parse(input);
+        const data = await executeTask(
+          "complete",
+          {
+            prompt: parsed.prompt,
+            context: parsed.context,
+            maxTokens: parsed.maxTokens,
+          },
+          parsed.sensitivity
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+      case "detect_bias": {
+        const parsed = detectBiasSchema.parse(input);
+        const data = await executeTask(
+          "detect_bias",
+          { prompt: parsed.prompt, context: parsed.context },
+          parsed.sensitivity
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+      case "score_justification": {
+        const parsed = scoreJustificationSchema.parse(input);
+        const data = await executeTask(
+          "score_justification",
+          {
+            prompt: parsed.prompt,
+            context: parsed.context,
+            rules: parsed.rules,
+          },
+          parsed.sensitivity
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+      case "draft_cdc_section": {
+        const parsed = draftCdcSectionSchema.parse(input);
+        const data = await executeTask(
+          "draft_cdc_section",
+          {
+            prompt: parsed.prompt,
+            context: parsed.context,
+            sectionType: parsed.sectionType,
+          },
+          parsed.sensitivity
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+      case "classify_risk": {
+        const parsed = classifyRiskSchema.parse(input);
+        const data = await executeTask(
+          "classify_risk",
+          {
+            prompt: parsed.prompt,
+            context: parsed.context,
+            categories: parsed.categories,
+          },
+          parsed.sensitivity
+        );
+        return { content: [{ type: "text", text: JSON.stringify(data) }] };
+      }
+      default:
+        throw new Error(`Unknown tool: ${toolName}`);
     }
-    case "detect_bias": {
-      const parsed = detectBiasSchema.parse(input);
-      const data = await executeTask(
-        "detect_bias",
-        { prompt: parsed.prompt, context: parsed.context },
-        parsed.sensitivity
-      );
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
-    }
-    case "score_justification": {
-      const parsed = scoreJustificationSchema.parse(input);
-      const data = await executeTask(
-        "score_justification",
-        {
-          prompt: parsed.prompt,
-          context: parsed.context,
-          rules: parsed.rules,
-        },
-        parsed.sensitivity
-      );
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
-    }
-    case "draft_cdc_section": {
-      const parsed = draftCdcSectionSchema.parse(input);
-      const data = await executeTask(
-        "draft_cdc_section",
-        {
-          prompt: parsed.prompt,
-          context: parsed.context,
-          sectionType: parsed.sectionType,
-        },
-        parsed.sensitivity
-      );
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
-    }
-    case "classify_risk": {
-      const parsed = classifyRiskSchema.parse(input);
-      const data = await executeTask(
-        "classify_risk",
-        {
-          prompt: parsed.prompt,
-          context: parsed.context,
-          categories: parsed.categories,
-        },
-        parsed.sensitivity
-      );
-      return { content: [{ type: "text", text: JSON.stringify(data) }] };
-    }
-    default:
-      throw new Error(`Unknown tool: ${toolName}`);
+  } catch (error: any) {
+    console.error(`Error in tool ${toolName}:`, error?.response?.data || error);
+    throw error;
   }
 });
 
